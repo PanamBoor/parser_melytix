@@ -1,176 +1,353 @@
-from tokenize import Comment
-
 from bs4 import BeautifulSoup
 import requests as req
-
-url = "https://habr.com/ru/post/525638/"
-resp = req.get(url)
+import re
 
 
-# Получаем домен сайта +
-def getDomen(url):
-    print(url.split('/')[2])
-    return (url.split('/')[2])
+class MainSiteParser(object):
+    def __init__(self, site_ulr):
+        self.__site_url = site_ulr
+        resp = req.get(site_ulr)
+        if resp.status_code == 200:
+            self.soup = BeautifulSoup(resp.text, 'lxml')
+        else:
+            domain = site_ulr.split('/')[2]
+            raise ConnectionError(f"Could not fetch domain {domain}")
+
+    def parse(self) -> dict:
+        attributes = [attr for attr in dir(self) if attr != 'parse' and not attr.startswith('__')]
+        return {property: getattr(self, property, '') for property in attributes}
+
+    # Получаем домен главного сайта
+    @property
+    def domain(self):
+        return dict(self.__site_url.split('/')[2])
+
+    # Получаем все мета подключения на главном сайте
+    @property
+    def meta_main(self):
+        return self.soup.find_all("meta")
+
+    # Получаем кол-во тегов h1
+    @property
+    def h1_count(self):
+        return len(self.soup.find_all("h1"))
+
+    # Получаем текст тегов h1
+    @property
+    def h1_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h1"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем кол-во тегов h2
+    @property
+    def h2_count(self):
+        return len(self.soup.find_all("h2"))
+
+    # получаем текст тегов h2
+    @property
+    def h2_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h2"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем кол-во тегов h3
+    @property
+    def h3_count(self):
+        return len(self.soup.find_all("h3"))
+
+    # получаем текст тегов h3
+    @property
+    def h3_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h3"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем кол-во тегов h4
+    @property
+    def h4_count(self):
+        return len(self.soup.find_all("h4"))
+
+    # получаем текст тегов h4
+    @property
+    def h4_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h4"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем кол-во тегов h5
+    @property
+    def h5_count(self):
+        return len(self.soup.find_all("h5"))
+
+    # получаем текст тегов h5
+    @property
+    def h5_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h5"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем кол-во тегов h6
+    @property
+    def h6_count(self):
+        return len(self.soup.find_all("h6"))
+
+    # получаем текст тегов h6
+    @property
+    def h6_txt(self):
+        answer = []
+        for tag in self.soup.find_all("h6"):
+            answer.append("{0} txt- {1}".format(tag.name, tag.text))
+        return answer
+
+    # получаем текст meta title
+    @property
+    def meta_title(self):
+        return self.soup.find("meta", property="og:title").get('content', '')
+
+    # получаем текст meta description
+    @property
+    def meta_description(self):
+        return self.soup.find("meta", property="og:description").get('content', '')
+
+    # Выгружаем теги <iframe> кол-во
+    @property
+    def iframe_count(self):
+        return len(self.soup.find_all("iframe"))
+
+    # получаем все текста тегов alt атрибутов изображения
+    @property
+    def alt_txt(self):
+        return self.soup.find("alt", property="og:description").get('content', '')
+
+    # получаем кол-во символов на странице, все заголовки
+    @property
+    def count_symbol(self):
+        return len(self.soup.find_all("p"))
+
+    # выгрузить весь текстов тегов href на сайте
+    @property
+    def href_txt(self):
+        return self.soup.find("href").get('content', '')
+
+    # Проверка есть ли кодировка utf на сайте
+    @property
+    def is_utf(self) -> bool:
+        answer = []
+        if self.soup.find_all('meta charset="utf-8"'):
+            answer = "True"
+        else:
+            answer = "False"
+
+    # Выгружаем все мета линки сайта
+    @property
+    def meta_links(self):
+        links_urls = []
+        for i in self.soup.findAll('a'):
+            links_urls.append(str(i.get('href')))
+        links_urls = list(filter(lambda x: x.startswith('https'), links_urls))
+        new_links = list(set(links_urls))
+        domain = self.__site_url.split('/')[2]
+        links = []
+        for i in new_links:
+            try:
+                match = re.search(fr'(https:(..{domain}(.*)?))', i).group(1)
+                links.append(match)
+            except:
+                pass
+
+        return list(links)
 
 
-# Получаем все мета подключения на сайте +
-def getMeta():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    page_url = soup.find_all("meta")
-    print(page_url)
-    return page_url
+class SiteUrls(object):
+    def __init__(self, site_urls):
+        self.__site_urls = site_urls
+        for j in site_urls:
+            resp = req.get(j)
+            if resp.status_code == 200:
+                self.soup = BeautifulSoup(resp.text, 'lxml')
+                print(j)
+            else:
+                domain = j.split('/')[2]
+                raise ConnectionError(f'could not fetch domain {domain} html')
 
+    def parse(self) -> dict:
+        attributes = [attr for attr in dir(self) if attr != 'parse' and not attr.startswith('__')]
+        return {property: getattr(self, property, '') for property in attributes}
 
-# Кол-во тегов h1 +
-def getTegH1Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h1"):
-        col += 1
-    print("h1(кол-во) " + str(col))
+    @property
+    def meta_urls(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("meta")
+        return answer
 
+    # Кол-во тегов h1 +
+    @property
+    def h1_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h1"))
+        return answer
 
-# Кол-во тегов h2 +
-def getTegH2Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h2"):
-        col += 1
-    print("h2(кол-во) " + str(col) + " тег ")
+    # Получаем текст тегов h1
+    @property
+    def h1_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h1")
+        return answer
 
+    # Кол-во тегов h2
+    @property
+    def h2_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h2"))
+        return answer
 
-# Кол-во тегов h3 +
-def getTegH3Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h3"):
-        col += 1
-    print("h3(кол-во) " + str(col) + " тег ")
+    # Получаем текст тегов h2
+    @property
+    def h2_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h2")
+        return answer
 
+    # Кол-во тегов h3
+    @property
+    def h3_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h3"))
+        return answer
 
-# Кол-во тегов h4
-def getTegH4Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h4"):
-        col += 1
-    print("h4(кол-во) " + str(col) + " тег ")
+    # Получаем текст тегов h3
+    @property
+    def h3_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h3")
+        return answer
 
+    # Кол-во тегов h4
+    @property
+    def h4_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h4"))
+        return answer
 
-# Кол-во тегов h5
-def getTegH5Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h5"):
-        col += 1
-    print("h5(кол-во) " + str(col) + " тег ")
+    # Получаем текст тегов h3
+    @property
+    def h4_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h4")
+        return answer
 
+    # Кол-во тегов h5
+    @property
+    def h5_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h5"))
+        return answer
 
-# Кол-во тегов h6 +
-def getTegH6Count():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("h6"):
-        col += 1
-    print("h6(кол-во) " + str(col) + " тег ")
+    # Получаем текст тегов h5
+    @property
+    def h5_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h5")
+        return answer
 
+    # Кол-во тегов h6
+    @property
+    def h6_counts(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("h6"))
+        return answer
 
-# получаем текст тега h1
-def getTegH1Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h1"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
+    # Получаем текст тегов h6
+    @property
+    def h6_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find_all("h6")
+        return answer
 
+    # получаем текст meta title
+    @property
+    def meta_title(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find("meta", property="og:title").get('content', '')
+        return answer
 
-# получаем текст тегов h2
-def getTegH2Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h2"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
+    # получаем текст meta description
+    @property
+    def meta_description(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find("meta", property="og:description").get('content', '')
+        return answer
 
+    # Выгружаем теги <iframe> кол-во
+    @property
+    def iframe_count(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("iframe"))
+        return answer
 
-# получаем текст тегов h3
-def getTegH3Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h3"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
+    # получаем все текста тегов alt атрибутов изображения
+    @property
+    def alt_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find("alt", property="og:description").get('content', '')
+        return answer
 
+    # получаем кол-во символов на странице, все заголовки
+    @property
+    def count_symbol(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = len(self.soup.find_all("p"))
+        return answer
 
-# получаем текст тегов h4
-def getTegH4Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h4"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
+    # выгрузить весь текстов тегов href на сайте
+    @property
+    def href_txt(self):
+        answer = {}
+        for i in self.__site_urls:
+            answer[i] = self.soup.find("href").get('content', '')
+        return answer
 
-
-# получаем текст тегов h5
-def getTegH5Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h5"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
-
-
-# получаем текст тегов h6
-def getTegH6Txt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("h6"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
-
-
-# получаем текст meta title
-def getMetaTitle():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find("meta", property="og:title"):
-        title = soup.find("meta", property="og:title")
-        print("meta title - " + title["content"] if title else "No meta title given")
-
-
-# получаем текст meta description
-def getMetaDescription():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    title = soup.find("meta", property="og:description")
-    print("meta description - " + title["content"] if title else "No meta description given")
-
-
-# Выгружаем теги <iframe> кол-во
-def getTagIframeCount():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    col = 0
-    for tag in soup.find_all("iframe"):
-        col += 1
-    print("iframe кол-во - " + str(col))
-
-
-# получаем все текста тегов alt атрибутов изображения
-def getAltTxt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    title = soup.find("alt", property="og:description")
-    print("alt txt - " + title["content"] if title else "No alt txt given")
-
-
-# получаем кол-во символов на странице, все заголовки
-def getCountSymbol():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    for tag in soup.find_all("p"):
-        print("{0} txt- {1}".format(tag.name, tag.text))
-
-
-# выгрузить весь текстов тегов href на сайте
-def getHrefTxt():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    title = soup.find("href")
-    print("href txt - " + title["content"] if title else "No href txt given")
-
-
-# Проверка есть ли кодировка utf на сайте
-def getUtf():
-    soup = BeautifulSoup(resp.text, 'lxml')
-    page_url = soup.find_all('meta charset="UTF-8"')
-    print ("+") if page_url else print("-")
+    # Проверка есть ли кодировка utf на сайте
+    @property
+    def is_utf(self):
+        answer = {}
+        for i in self.__site_urls:
+            if self.soup.find_all('meta charset="utf-8"'):
+                answer[i] = "True"
+            else:
+                answer[i] = "False"
+        return answer
 
 
 if __name__ == "__main__":
-    getDomen(url), getMeta(), getTegH1Count(), getTegH2Count(), getTegH3Count()
-    getTegH4Count(), getTegH5Count(), getTegH6Count(), getTegH1Txt(), getTegH2Txt(), getTegH3Txt(),
-    getTegH4Txt(), getTegH5Txt(), getTegH6Txt(), getMetaTitle(), getMetaDescription(), getTagIframeCount(), getAltTxt(),
-    getCountSymbol(), getHrefTxt(), getUtf()
+    url = 'https://kith2kin.com.ua/'
+    urls = MainSiteParser(url).meta_links
+    # print(SiteUrls(urls).meta_urls)
+    print(SiteUrls(urls).meta_urls)
+
+    # нужно залить на гит и отправить максу на проверку
+
